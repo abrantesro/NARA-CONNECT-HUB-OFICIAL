@@ -4,15 +4,15 @@ import { Send, User, Bot, Sparkles, ChevronRight, Mic, MicOff, Volume2, VolumeX,
 
 export default function ConnectHubNara() {
   const [step, setStep] = useState('welcome');
-  const [messages, setMessages] = useState<Array<{ role: string; content: string; image?: string | null }>>([]);
+  const [messages, setMessages] = useState([] as any[]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [context, setContext] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedImage, setSelectedImage] = useState(null as string | null);
+  const scrollRef = useRef(null as HTMLDivElement | null);
+  const fileInputRef = useRef(null as HTMLInputElement | null);
 
   const options = [
     { id: 'secretaria_executiva', icon: '🧠', label: 'Secretária Executiva & Mentora (DECIDA AÍ / Azmtech)' },
@@ -72,7 +72,7 @@ export default function ConnectHubNara() {
     recognition.start();
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = (e: any) => {
     const firstFile = e.target.files ? e.target.files.item(0) : null;
     if (!firstFile) return;
     const reader = new FileReader();
@@ -82,7 +82,7 @@ export default function ConnectHubNara() {
     reader.readAsDataURL(firstFile);
   };
 
-  const handleStart = (opt: { id: string; label: string }) => {
+  const handleStart = (opt: any) => {
     setContext(opt.label);
     setStep('chat');
 
@@ -212,3 +212,5 @@ export default function ConnectHubNara() {
                   }`}
                 >
                   {m.image && (
+                    <img src={m.image} alt="Imagem enviada" className="max-h-48 rounded-lg mb-2 border border-white/20" />
+                  )}
