@@ -72,13 +72,13 @@ export default function ConnectHubNara() {
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
     const reader = new FileReader();
     reader.onloadend = () => {
       setSelectedImage(reader.result as string);
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(files[0]);
   };
 
   const handleStart = (opt: any) => {
@@ -122,7 +122,7 @@ export default function ConnectHubNara() {
       });
 
       const data = await response.json();
-      const reply = data.text || 'Recebi sua mensagem! Como posso ajudar no próximo passo?';
+      const reply = data.text || data.error || 'Recebi sua mensagem! Como posso ajudar no próximo passo?';
       setMessages((prev) => [...prev, { role: 'assistant', content: reply }]);
       speakText(reply);
     } catch (error) {
