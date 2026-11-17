@@ -7,7 +7,7 @@ export async function POST(req: Request) {
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      throw new Error("Chave da API Gemini não encontrada");
+      return NextResponse.json({ text: "⚠️ A chave GEMINI_API_KEY não está configurada na Vercel." });
     }
 
     const ai = new GoogleGenAI({ apiKey });
@@ -52,7 +52,8 @@ RESPOSTA DA NARA (em português brasileiro claro):
 
     if (image && typeof image === "string" && image.includes(",")) {
       const [meta, base64Data] = image.split(",");
-      const mimeType = meta.match(/:(.*?);/)?.[1] || "image/png";
+      const match = meta.match(/:(.*?);/);
+      const mimeType = match ? match : "image/png";
       contents.push({
         inlineData: {
           data: base64Data,
@@ -71,9 +72,8 @@ RESPOSTA DA NARA (em português brasileiro claro):
     return NextResponse.json({ text: responseText });
   } catch (error: any) {
     console.error("Erro na API da NARA:", error);
-    return NextResponse.json(
-      { error: "Erro ao processar solicitação da NARA." },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      text: `⚠️ Ocorreu um detalhe técnico ao falar com o Gemini: ${error?.message || "Verifique sua chave API"}.`,
+    });
   }
 }
