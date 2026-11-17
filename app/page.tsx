@@ -216,3 +216,47 @@ export default function ConnectHubNara() {
                   {m.content}
                 </div>
                 {m.role === 'user' && (
+Use o código com cuidado.
+)}
+
+))}
+{loading && (
+
+ NARA está pensando e preparando a resposta...
+
+)}
+{selectedImage && (
+
+
+<button
+onClick={() => setSelectedImage(null)}
+className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+>
+
+
+
+)}
+<button
+onClick={() => fileInputRef.current?.click()}
+className="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-green-400 transition"
+title="Enviar imagem ou print"
+>
+
+<button
+onClick={toggleListening}
+className={p-3 rounded-xl border transition ${ isListening ? 'bg-red-500/20 border-red-400 text-red-400 animate-pulse' : 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-300 hover:text-green-400' }}
+title="Falar no microfone"
+>
+{isListening ?  : }
+<input
+type="text"
+value={input}
+onChange={(e) => setInput(e.target.value)}
+onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+placeholder={isListening ? 'Pode falar, estou ouvindo...' : 'Escreva ou fale com a NARA...'}
+className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-400 focus:outline-none focus:border-green-400"
+/>
+)}
+
+);
+}
