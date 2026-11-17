@@ -86,14 +86,10 @@ export default function ConnectHubNara() {
     setContext(opt.label);
     setStep('chat');
 
-    const welcomeMsg =
-      opt.id === 'secretaria_executiva'
-        ? `Olá! Sou a **NARA**, sua secretária executiva e mentora tecnológica. Estou pronta para organizar seus projetos (**DECIDA AÍ**, **Azmtech**, **Connect Hub**), guiar você passo a passo ou analisar imagens e ideias. Pode falar no microfone ou escrever o que precisa!`
-        : `Que bom ter você aqui! Escolher "${opt.label}" é o primeiro passo para transformar uma ideia em realidade. Sou a **NARA** e vou ajudar a estruturar e avaliar seu projeto. Pode me contar por texto, áudio ou enviar uma imagem!`;
+   
 
-    setMessages([{ role: 'assistant', content: welcomeMsg }]);
-    speakText(welcomeMsg);
-  };
+    
+  
 
   const sendMessage = async () => {
     if ((!input.trim() && !selectedImage) || loading) return;
