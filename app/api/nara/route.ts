@@ -1,79 +1,340 @@
-import { GoogleGenAI } from "@google/genai";
-import { NextResponse } from "next/server";
+'use client';
 
-export async function POST(req: Request) {
-  try {
-    const { messages, context, image } = await req.json();
+import { useState, useRef, useEffect } from 'react';
+import {
+  Send,
+  Bot,
+  Sparkles,
+  ChevronRight,
+  Mic,
+  MicOff,
+  Volume2,
+  VolumeX,
+  Image as ImageIcon,
+  X,
+  Loader2,
+} from 'lucide-react';
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ text: "⚠️ A chave GEMINI_API_KEY não está configurada na Vercel." });
+type Msg = { role: 'user' | 'assistant'; content: string; image?: string | null };
+
+type Option = { id: string; icon: string; label: string };
+
+export default function ConnectHubNara() {
+  const [step, setStep] = useState<'welcome' | 'chat'>('welcome');
+  const [messages, setMessages] = useState<Msg[]>([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [context, setContext] = useState('');
+  const [isListening, setIsListening] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const options: Option[] = [
+    { id: 'secretaria_executiva', icon: '🧠', label: 'Secretária Executiva & Mentora (DECIDA AÍ / Azmtech)' },
+    { id: 'projeto_social', icon: '🌱', label: 'Tenho um projeto social' },
+    { id: 'projeto_negocio', icon: '💼', label: 'Tenho uma ideia de negócio' },
+    { id: 'projeto_comunidade', icon: '🏘️', label: 'Quero ajudar minha comunidade' },
+    { id: 'projeto_educacao', icon: '📚', label: 'Quero criar um projeto educativo' },
+    { id: 'projeto_meio_ambiente', icon: '🌳', label: 'Quero um projeto sustentável' },
+    { id: 'projeto_saude', icon: '❤️', label: 'Tenho um projeto de saúde' },
+    { id: 'projeto_cultura', icon: '🎭', label: 'Quero um projeto cultural' },
+    { id: 'projeto_emprego', icon: '🚀', label: 'Quero gerar emprego/renda' },
+  ];
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages, loading]);
+
+  const speakText = (text: string) => {
+    if (!voiceEnabled || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const cleanText = text.replace(/[*#_`]/g, '');
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = 'pt-BR';
+    utterance.rate = 1.05;
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const toggleListening = () => {
+    if (typeof window === 'undefined') return;
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      alert('Seu navegador não suporta reconhecimento de voz. Use o Google Chrome.');
+      return;
     }
 
-    const ai = new GoogleGenAI({ apiKey });
+    if (isListening) {
+      setIsListening(false);
+      return;
+    }
 
-    const lastMessage = messages[messages.length - 1]?.content || "";
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'pt-BR';
+    recognition.interimResults = false;
 
-    const history = messages
-      .slice(-6)
-      .map((m: any) => `${m.role === "user" ? "Usuário" : "NARA"}: ${m.content}`)
-      .join("\n");
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => setIsListening(false);
 
-    const systemPrompt = `
-Você é a NARA (Núcleo de Apoio à Recuperação Ambiental e Desenvolvimento Inteligente), a inteligência artificial executiva, acolhedora e mentora tecnológica de última geração do ecossistema Connect Hub, Azmtech e DECIDA AÍ.
+    recognition.onresult = (event: any) => {
+      const firstResult = event.results.item(0);
+      const transcript = firstResult ? firstResult.item(0).transcript : '';
+      setInput((prev) => (prev ? `${prev} ${transcript}` : transcript));
+    };
 
-SUA MISSÃO E POSTURA:
-1. Secretária Executiva de Confiança: Você organiza ideias, planeja soluções, conecta pessoas e entrega resultados prontos para uso.
-2. Mentora Passo a Passo (NARA GUIDE): Sempre que a usuária estiver operando uma ferramenta tecnológica (GitHub, Hostinger, Vercel, criação de agentes) ou enviar uma captura de tela (print), guie-a tela por tela com paciência, clareza e sem termos técnicos difíceis, apontando exatamente onde clicar.
-3. Visão de Legado e Impacto: Apoie com entusiasmo os projetos DECIDA AÍ (educação e jovens), Azmtech (cursos de IA e agentes) e Connect Hub.
+    recognition.start();
+  };
 
-FLUXO OBRIGATÓRIO DE TRABALHO:
-- ESCUTAR E COMPREENDER: Entenda o objetivo da solicitação (texto, voz ou imagem).
-- ESCOLHER O MODO E A SKILL ADEQUADA:
-  * [SKILL: GESTORA DE PROJETOS]: Se o pedido envolver organizar ideias, planejar etapas ou registrar tarefas, divida em 3 a 5 passos curtos (modo 80/20), peça autorização (NARA GUARD: "Você aprova este plano para registrarmos como tarefa ativa?") e, após o ok, entregue o cartão de registro verificável (NARA EVAL: Projeto, Tarefa, Status, Evidência e Próximo Passo).
-  * [SKILL: AVALIADORA DE PROJETOS CONNECT HUB]: Se o usuário enviar um projeto social/impacto para avaliação formal, avalie em 3 critérios (Clareza, Viabilidade e Impacto de 0 a 10), calcule a média e dê o parecer (Aprovado >= 7 ou Rejeitado < 7) com os próximos passos.
-  * [MODO MENTORA / NARA VISION]: Se houver uma imagem ou print anexado, descreva o que vê e dê instruções claras e práticas.
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const firstFile = e.target.files ? e.target.files.item(0) : null;
+    if (!firstFile) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setSelectedImage(reader.result as string);
+    };
+    reader.readAsDataURL(firstFile);
+  };
 
-REGRAS DE SEGURANÇA (NARA GUARD):
-- Nunca tome decisões externas, publique conteúdos ou altere configurações críticas sem mostrar o plano e pedir autorização explícita antes.
-- Escreva respostas claras, naturais e bem organizadas (elas também serão lidas em voz alta para a usuária).
+  const handleStart = (opt: Option) => {
+    setContext(opt.label);
+    setStep('chat');
+  };
 
-CONTEXTO ATUAL: ${context || "Conversa geral"}
+  const sendMessage = async () => {
+    if ((!input.trim() && !selectedImage) || loading) return;
 
-HISTÓRICO RECENTE DA CONVERSA:
-${history}
+    const userMessage: Msg = {
+      role: 'user',
+      content: input || 'Enviei uma imagem para você analisar.',
+      image: selectedImage,
+    };
 
-ÚLTIMA MENSAGEM DO USUÁRIO: "${lastMessage}"
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
 
-RESPOSTA DA NARA (em português brasileiro claro):
-`;
+    const currentImage = selectedImage;
+    setInput('');
+    setSelectedImage(null);
+    setLoading(true);
 
-    const contents: any[] = [systemPrompt];
-
-    if (image && typeof image === "string" && image.includes(",")) {
-      const [meta, base64Data] = image.split(",");
-      const match = meta.match(/:(.*?);/);
-      const mimeType = match ? match : "image/png";
-      contents.push({
-        inlineData: {
-          data: base64Data,
-          mimeType: mimeType,
-        },
+    try {
+      const response = await fetch('/api/nara', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: updatedMessages.map((m) => ({ role: m.role, content: m.content })),
+          context,
+          image: currentImage,
+        }),
       });
+
+      const data = await response.json();
+      const reply =
+        data.text || data.error || 'Recebi sua mensagem! Como posso ajudar no próximo passo?';
+
+      setMessages((prev) => [...prev, { role: 'assistant', content: reply }]);
+      speakText(reply);
+    } catch (error) {
+      const errMsg = 'Tive uma pequena instabilidade na conexão. Pode repetir, por favor?';
+      setMessages((prev) => [...prev, { role: 'assistant', content: errMsg }]);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    const result = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
-      contents: contents,
-    });
+  return (
+    <main className="flex flex-col min-h-screen bg-[#0a192f] text-slate-100 font-sans selection:bg-green-500/30">
+      <header className="p-4 border-b border-white/10 bg-[#0a192f]/90 backdrop-blur-md sticky top-0 z-50 flex justify-between items-center">
+        <div className="flex items-center gap-2 cursor-pointer" onClick={() => setStep('welcome')}>
+          <div className="w-8 h-8 bg-gradient-to-tr from-green-400 to-blue-500 rounded-lg flex items-center justify-center font-bold text-white shadow-lg">
+            N
+          </div>
+          <span className="font-bold tracking-tight text-xl">
+            NARA <span className="text-green-400">CONNECT HUB</span>
+          </span>
+        </div>
 
-    const responseText = result?.text || "Estou aqui! Como posso ajudar você e nossos projetos hoje?";
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              if (voiceEnabled && typeof window !== 'undefined') window.speechSynthesis.cancel();
+              setVoiceEnabled(!voiceEnabled);
+            }}
+            className="p-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-green-400 transition"
+            title={voiceEnabled ? 'Desativar voz da NARA' : 'Ativar voz da NARA'}
+          >
+            {voiceEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-slate-400" />}
+          </button>
+          <div className="px-3 py-1 rounded-full border border-green-500/30 bg-green-500/10 text-[10px] text-green-400 font-bold uppercase">
+            NARA • v1.0 Multimodal
+          </div>
+        </div>
+      </header>
 
-    return NextResponse.json({ text: responseText });
-  } catch (error: any) {
-    console.error("Erro na API da NARA:", error);
-    return NextResponse.json({
-      text: `⚠️ Ocorreu um detalhe técnico ao falar com o Gemini: ${error?.message || "Verifique sua chave API"}.`,
-    });
-  }
+      {step === 'welcome' ? (
+        <section className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+          <div className="relative mb-8">
+            <div className="absolute inset-0 bg-green-400 rounded-full blur-3xl opacity-20 animate-pulse"></div>
+            <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-blue-600 rounded-full flex items-center justify-center shadow-2xl relative">
+              <Sparkles className="text-white w-9 h-9" />
+            </div>
+          </div>
+          <h1 className="text-3xl md:text-5xl font-light mb-4 leading-tight">
+            Olá! Eu sou a <span className="font-bold text-green-400">NARA</span>
+          </h1>
+          <p className="text-blue-100/70 max-w-xl mb-8 text-base md:text-lg">
+            Sua inteligência artificial executiva, mentora tecnológica e avaliadora de projetos do
+            ecossistema <strong>Connect Hub</strong>, <strong>Azmtech</strong> e{' '}
+            <strong>DECIDA AÍ</strong>.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 w-full max-w-5xl">
+            {options.map((opt) => (
+              <button
+                key={opt.id}
+                onClick={() => handleStart(opt)}
+                className="group flex items-center justify-between p-4 bg-white/5 hover:bg-green-500/15 border border-white/10 hover:border-green-400/50 rounded-2xl transition-all text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">{opt.icon}</span>
+                  <span className="text-sm font-medium text-slate-200 group-hover:text-white">
+                    {opt.label}
+                  </span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-white/30 group-hover:text-green-400 shrink-0" />
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : (
+        <section className="flex-1 flex flex-col max-w-4xl mx-auto w-full p-4">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-4 py-4 pr-1">
+            {messages.length === 0 && (
+              <p className="text-center text-sm text-blue-100/50 mt-6">
+                Contexto: <span className="text-green-400">{context}</span> — escreva, fale ou envie
+                um print.
+              </p>
+            )}
+
+            {messages.map((m, idx) => (
+              <div
+                key={idx}
+                className={`flex gap-3 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                {m.role === 'assistant' && (
+                  <div className="w-8 h-8 rounded-full bg-green-500/20 border border-green-400/40 flex items-center justify-center shrink-0 mt-1">
+                    <Bot className="w-4 h-4 text-green-400" />
+                  </div>
+                )}
+                <div
+                  className={`max-w-[80%] rounded-2xl p-4 text-sm leading-relaxed whitespace-pre-wrap ${
+                    m.role === 'user'
+                      ? 'bg-green-600 text-white rounded-br-none'
+                      : 'bg-white/10 border border-white/10 text-slate-100 rounded-bl-none'
+                  }`}
+                >
+                  {m.image && (
+                    <img
+                      src={m.image}
+                      alt="Imagem enviada"
+                      className="max-h-48 rounded-lg mb-2 border border-white/20"
+                    />
+                  )}
+                  {m.content}
+                </div>
+              </div>
+            ))}
+
+            {loading && (
+              <div className="flex gap-3 justify-start">
+                <div className="w-8 h-8 rounded-full bg-green-500/20 border border-green-400/40 flex items-center justify-center shrink-0 mt-1">
+                  <Bot className="w-4 h-4 text-green-400" />
+                </div>
+                <div className="bg-white/10 border border-white/10 rounded-2xl rounded-bl-none p-4 flex items-center gap-2 text-sm text-slate-300">
+                  <Loader2 className="w-4 h-4 animate-spin text-green-400" />
+                  NARA está pensando...
+                </div>
+              </div>
+            )}
+          </div>
+
+          {selectedImage && (
+            <div className="relative w-fit mb-2">
+              <img
+                src={selectedImage}
+                alt="Pré-visualização"
+                className="max-h-28 rounded-lg border border-green-400/40"
+              />
+              <button
+                onClick={() => setSelectedImage(null)}
+                className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 hover:bg-red-400 transition"
+                title="Remover imagem"
+              >
+                <X className="w-3 h-3 text-white" />
+              </button>
+            </div>
+          )}
+
+          <div className="flex items-end gap-2 border-t border-white/10 pt-3 mt-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-green-400 transition"
+              title="Enviar imagem ou print"
+            >
+              <ImageIcon className="w-4 h-4" />
+            </button>
+
+            <button
+              onClick={toggleListening}
+              className={`p-3 rounded-xl border transition ${
+                isListening
+                  ? 'bg-red-500/20 border-red-400/60 text-red-300 animate-pulse'
+                  : 'bg-white/5 hover:bg-white/10 border-white/10 text-green-400'
+              }`}
+              title={isListening ? 'Parar de ouvir' : 'Falar com a NARA'}
+            >
+              {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+            </button>
+
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage();
+                }
+              }}
+              rows={1}
+              placeholder="Escreva sua mensagem para a NARA..."
+              className="flex-1 resize-none bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-green-400/60"
+            />
+
+            <button
+              onClick={sendMessage}
+              disabled={loading || (!input.trim() && !selectedImage)}
+              className="p-3 rounded-xl bg-green-600 hover:bg-green-500 disabled:opacity-40 disabled:hover:bg-green-600 text-white transition"
+              title="Enviar"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            </button>
+          </div>
+        </section>
+      )}
+    </main>
+  );
 }
